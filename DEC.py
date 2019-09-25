@@ -91,8 +91,10 @@ class ClusteringLayer(Layer):
         weights: list of Numpy array with shape `(n_clusters, n_features)` witch represents the initial cluster centers.
         alpha: parameter in Student's t-distribution. Default to 1.0.
     # Input shape
+         # can have 3D tensor (batch size, num_points, n_features)
         2D tensor with shape: `(n_samples, n_features)`.
     # Output shape
+         # can have 3D tensor (batch size, num_points, n_clusters)
         2D tensor with shape: `(n_samples, n_clusters)`.
     """
 
@@ -103,10 +105,13 @@ class ClusteringLayer(Layer):
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.initial_weights = weights
+	#make it 3
         self.input_spec = InputSpec(ndim=2)
 
     def build(self, input_shape):
+	# make it 3
         assert len(input_shape) == 2
+	# check two
         input_dim = input_shape[1]
         self.input_spec = InputSpec(dtype=K.floatx(), shape=(None, input_dim))
         self.clusters = self.add_weight((self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
@@ -129,6 +134,7 @@ class ClusteringLayer(Layer):
         return q
 
     def compute_output_shape(self, input_shape):
+	# change it to 3
         assert input_shape and len(input_shape) == 2
         return input_shape[0], self.n_clusters
 
@@ -154,8 +160,9 @@ class DEC(object):
         #Noise and Non Noise2
         self.n_clusters = n_clusters
         self.alpha = alpha
+	
         self.autoencoder, self.encoder = autoencoder(self.dims, init=init)
-
+         
         # prepare DEC model
         clustering_layer = ClusteringLayer(self.n_clusters, name='clustering')(self.encoder.output)
         self.model = Model(inputs=self.encoder.input, outputs=clustering_layer)
@@ -191,6 +198,7 @@ class DEC(object):
         # begin pretraining
         t0 = time()
         self.autoencoder.fit(x, x, batch_size=batch_size, epochs=epochs, callbacks=cb)
+	
         print('Pretraining time: %ds' % round(time() - t0))
         self.autoencoder.save_weights(save_dir + '/ae_weights.h5')
         print('Pretrained weights are saved to %s/ae_weights.h5' % save_dir)
