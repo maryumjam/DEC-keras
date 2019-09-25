@@ -33,9 +33,30 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     return:
         (ae_model, encoder_model), Model of autoencoder and model of encoder
     """
+     # dims [nz=3,64, 128, 256, 1024, 10]
+     x = Input(shape=(dims[0],), name='input')
     n_stacks = len(dims) - 1
     # input
-    x = Input(shape=(dims[0],), name='input')
+    #Encoder 
+
+	#enc = InputLayer(shape=(None,1,input_depth,input_rows,input_columns)) #5D tensor
+	#enc = Conv3DLayer(incoming=enc, num_filters=64, filter_size=5,stride=2, nonlinearity=lrelu(0.2))
+	#enc = Conv3DLayer(incoming=enc, num_filters=128, filter_size=5,stride=2, nonlinearity=lrelu(0.2))
+	#enc = Conv3DLayer(incoming=enc, num_filters=256, filter_size=5,stride=2, nonlinearity=lrelu(0.2))
+	#enc = Conv3DLayer(incoming=enc, num_filters=1024, filter_size=5,stride=2, nonlinearity=lrelu(0.2))
+	#enc = reshape(incoming=enc, shape=(-1,1024*4*4*10))
+	#enc = DenseLayer(incoming=enc, num_units=nz, nonlinearity=sigmoid)
+
+	#Decoder 
+
+	#dec = InputLayer(shape=(None,nz))
+	#dec = DenseLayer(incoming=dec, num_units=1024*4*4*10)
+	#dec = reshape(incoming=dec, shape=(-1,1024,10,4,4))
+	#dec=Deconv3D(incoming=dec, num_filters=256, filter_size=4 ,stride=2, nonlinearity=relu)
+	#dec=Deconv3D(incoming=dec, num_filters=128, filter_size=4 ,stride=2, nonlinearity=relu)
+	#dec=Deconv3D(incoming=dec, num_filters=64, filter_size=4 ,stride=2, nonlinearity=relu)
+	#dec=Deconv3D(incoming=dec, num_filters=1, filter_size=4 ,stride=2, nonlinearity=sigmoid)
+   
     h = x
 
     # internal layers in encoder
@@ -53,7 +74,7 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     # output
     y = Dense(dims[0], kernel_initializer=init, name='decoder_0')(y)
 
-    return Model(inputs=x, outputs=y, name='AE'), Model(inputs=x, outputs=h, name='encoder')
+    return Model(inputs=x, outputs=dec, name='AE'), Model(inputs=x, outputs=h, name='encoder')
 
 
 class ClusteringLayer(Layer):
@@ -125,11 +146,12 @@ class DEC(object):
                  init='glorot_uniform'):
 
         super(DEC, self).__init__()
-
+        #in our case [nz=3,64, 128, 256, 1024, 10]
         self.dims = dims
+        # in our case dims[0] =3
         self.input_dim = dims[0]
         self.n_stacks = len(self.dims) - 1
-
+        #Noise and Non Noise2
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.autoencoder, self.encoder = autoencoder(self.dims, init=init)
@@ -287,7 +309,12 @@ if __name__ == "__main__":
 
     # load dataset
     from datasets import load_data
+    # load data from datasets.py file which loads train and test data and labels in available
+    # format of X (num_samples, 32, 32, 3=number of channels)
+    # incase of Pointcloud (batchsize,4096,3, number of channels=1)
     x, y = load_data(args.dataset)
+    # y or labels give number of classes or lables which in unique gives number of clusters
+    #incase of Noise filtering it will be two classes
     n_clusters = len(np.unique(y))
 
     init = 'glorot_uniform'
@@ -318,6 +345,7 @@ if __name__ == "__main__":
         pretrain_epochs = args.pretrain_epochs
 
     # prepare the DEC model
+    # inour case it will be [nz=3,64, 128, 256, 1024, 10]
     dec = DEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=n_clusters, init=init)
 
     if args.ae_weights is None:
